@@ -9,4 +9,4 @@ spring:
 
 app:
 #  base-url: ${APP_BASE_URL:http://localhost:8080}
-  base-url: http://teamfinder.up.railway.app
+  base-url: "http://teamfinder.up.railway.app"
