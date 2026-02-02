@@ -15,17 +15,7 @@ public class UserController {
 
     @Autowired
     private UserService userService;
-    @PostMapping("/signup")
-    public ResponseEntity<?> signUp(@RequestBody User user)
-    {
-        userService.signup(user);
-        return new ResponseEntity<>(HttpStatus.valueOf(200));
-    }
-    @GetMapping("/signin")
-    public ResponseEntity<?> signin(@RequestBody User user)
-    {
-        return userService.signin(user);
-    }
+
     @PutMapping("/change-bio")
     public ResponseEntity<?> changeBio(@RequestBody User user)
     {

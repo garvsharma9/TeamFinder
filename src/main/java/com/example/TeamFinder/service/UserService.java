@@ -2,18 +2,22 @@ package com.example.TeamFinder.service;
 
 import com.example.TeamFinder.entity.User;
 import com.example.TeamFinder.repository.UserRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-
+@Slf4j
 @Service
 public class UserService {
 
@@ -23,9 +27,20 @@ public class UserService {
     public boolean signup(User user)
     {
         user.setPassword(Objects.requireNonNull(passwordEncoder.encode(user.getPassword())));
+        user.setRoles(Arrays.asList("USER"));
         User insert = userRepository.insert(user);
         return true;
 
+    }
+    public void saveAdmin(User user) {
+        try{
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
+            user.setRoles(Arrays.asList("USER", "ADMIN"));
+            userRepository.save(user);
+        }catch(Exception e)
+        {
+            log.error("Error", e);
+        }
     }
     public ResponseEntity<?> signin(User user)
     {
@@ -40,6 +55,7 @@ public class UserService {
             {
                 return new ResponseEntity<>(HttpStatusCode.valueOf(401));
             }
+
         }
         else return new ResponseEntity<>(HttpStatusCode.valueOf(404));
     }
@@ -57,11 +73,12 @@ public class UserService {
     }
     public boolean addEmail(User user)
     {
+
         Optional<User> byUsername = userRepository.findByUsername(user.getUsername());
         if(!byUsername.isEmpty())
         {
             byUsername.get().setEmail(user.getEmail());
-            userRepository.insert(byUsername.get());
+            userRepository.save(byUsername.get());
             return true;
         }
         else
@@ -73,7 +90,7 @@ public class UserService {
         if(!byUsername.isEmpty())
         {
             byUsername.get().setEmail("");
-            userRepository.insert(byUsername.get());
+            userRepository.save(byUsername.get());
             return true;
         }
         else
@@ -85,7 +102,7 @@ public class UserService {
         if(!byUsername.isEmpty())
         {
             byUsername.get().setCollege(user.getCollege());
-            userRepository.insert(byUsername.get());
+            userRepository.save(byUsername.get());
             return true;
         }
         else
@@ -97,7 +114,7 @@ public class UserService {
         if(!byUsername.isEmpty())
         {
             byUsername.get().setCollege("");
-            userRepository.insert(byUsername.get());
+            userRepository.save(byUsername.get());
             return true;
         }
         else
@@ -125,7 +142,7 @@ public class UserService {
             {
                 byUsername.get().getSkill().add(skill);
             }
-            userRepository.insert(byUsername.get());
+            userRepository.save(byUsername.get());
             return true;
         }
         else
@@ -139,7 +156,7 @@ public class UserService {
         if(!byUsername.isEmpty())
         {
             byUsername.get().getSkill().remove(skill);
-            userRepository.insert(byUsername.get());
+            userRepository.save(byUsername.get());
             return true;
         }
         else

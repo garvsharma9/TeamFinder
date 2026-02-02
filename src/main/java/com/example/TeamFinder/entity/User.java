@@ -20,8 +20,11 @@ public class User {
     private String username;
     @NonNull
     private String password;
+    private String name;
     private String email;
     private String college;
     private String bio;
     private List<String> skill;
+    private List<String> roles;
+    private List<String> posts;
 }
