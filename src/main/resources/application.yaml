@@ -3,9 +3,9 @@ spring:
     name: TeamFinder
   mongodb:
     uri: mongodb+srv://garvroc9_db_user:cEDSfSFocc1v7BeY@cluster0.xweqsf8.mongodb.net/teamfinder
-#
+
 #server:
 #  port: 8080
-#
-#app:
-#  base-url: ${APP_BASE_URL:http://localhost:8080}
+
+app:
+  base-url: ${APP_BASE_URL:http://localhost:8080}
