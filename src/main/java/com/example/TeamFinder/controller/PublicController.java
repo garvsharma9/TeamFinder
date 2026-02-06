@@ -34,7 +34,7 @@ public class PublicController {
         userService.signup(user);
         return new ResponseEntity<>(HttpStatus.valueOf(200));
     }
-    @GetMapping("/signin")
+    @PostMapping("/signin")
     public ResponseEntity<?> signin(@RequestBody User user)
     {
         ResponseEntity<?> signin = userService.signin(user);
