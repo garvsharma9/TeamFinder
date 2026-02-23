@@ -24,7 +24,10 @@ public class User {
     private String email;
     private String college;
     private String bio;
+    private String branch;
     private List<String> skill;
     private List<String> roles;
     private List<String> posts;
+    private String experienceTag; // "Beginner", "Intermediate", "Pro"
+    private int likesReceived; // Increases when a team leader likes their profile
 }

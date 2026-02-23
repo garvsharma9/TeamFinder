@@ -35,9 +35,10 @@ public class PublicController {
         return new ResponseEntity<>(HttpStatus.valueOf(200));
     }
     @PostMapping("/signin")
-    public ResponseEntity<?> signin(@RequestBody User user)
+    public ResponseEntity<?> signin(@RequestBody LoginRequest loginRequest)
     {
-        ResponseEntity<?> signin = userService.signin(user);
+
+        ResponseEntity<?> signin = userService.signin(loginRequest);
         return signin;
     }
 

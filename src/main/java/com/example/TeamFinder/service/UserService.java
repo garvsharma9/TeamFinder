@@ -1,5 +1,6 @@
 package com.example.TeamFinder.service;
 
+import com.example.TeamFinder.entity.LoginRequest;
 import com.example.TeamFinder.entity.User;
 import com.example.TeamFinder.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +25,14 @@ public class UserService {
     @Autowired
     private UserRepository userRepository;
     private static final PasswordEncoder passwordEncoder=new BCryptPasswordEncoder();
+
+    //get user profile for dashboard rendering
+    public ResponseEntity<?> getUserProfile(String id)
+    {
+        Optional<User> byUsername = userRepository.findByUsername(id);
+        return new ResponseEntity<>(byUsername, HttpStatusCode.valueOf(200));
+    }
+
     public boolean signup(User user)
     {
         user.setPassword(Objects.requireNonNull(passwordEncoder.encode(user.getPassword())));
@@ -42,12 +51,12 @@ public class UserService {
             log.error("Error", e);
         }
     }
-    public ResponseEntity<?> signin(User user)
+    public ResponseEntity<?> signin(LoginRequest loginRequest)
     {
-        Optional<User> byUsername = userRepository.findByUsername(user.getUsername());
+        Optional<User> byUsername = userRepository.findByUsername(loginRequest.getUsername());
         if(!byUsername.isEmpty())
         {
-            if(passwordEncoder.matches(user.getPassword(), byUsername.get().getPassword()))
+            if(passwordEncoder.matches(loginRequest.getPassword(), byUsername.get().getPassword()))
             {
                 return new ResponseEntity<>(byUsername.get(), HttpStatusCode.valueOf(200));
             }

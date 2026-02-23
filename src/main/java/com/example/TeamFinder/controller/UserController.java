@@ -16,6 +16,14 @@ public class UserController {
     @Autowired
     private UserService userService;
 
+    //get user to render dashboard
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getUserProfile(@PathVariable String id) {
+
+        return userService.getUserProfile(id);
+    }
+
+
     @PutMapping("/change-bio")
     public ResponseEntity<?> changeBio(@RequestBody User user)
     {
