@@ -18,7 +18,6 @@ public class User {
     @Indexed(unique = true)
     @NonNull
     private String username;
-    @NonNull
     private String password;
     private String name;
     private String email;
@@ -30,4 +29,9 @@ public class User {
     private List<String> posts;
     private String experienceTag; // "Beginner", "Intermediate", "Pro"
     private int likesReceived; // Increases when a team leader likes their profile
+
+    // Add this new field to your User.java class
+    private List<String> likedBy;
+
+// Make sure to add the Getter and Setter for it if you aren't using Lombok's @Data!
 }
