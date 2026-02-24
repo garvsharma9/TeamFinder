@@ -3,7 +3,17 @@ spring:
     name: TeamFinder
   mongodb:
     uri: mongodb+srv://garvroc9_db_user:cEDSfSFocc1v7BeY@cluster0.xweqsf8.mongodb.net/teamfinder
-
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: garvroc9@gmail.com
+    password: ${GMAIL_APP_PASSWORD} # Pulls from your system environment variables
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 server:
   port: ${PORT:8080}
 
