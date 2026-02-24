@@ -3,6 +3,7 @@ package com.example.TeamFinder.service;
 import com.example.TeamFinder.entity.LoginRequest;
 import com.example.TeamFinder.entity.User;
 import com.example.TeamFinder.repository.UserRepository;
+import com.example.TeamFinder.util.JwtUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -12,16 +13,13 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 @Slf4j
 @Service
 public class UserService {
-
+    @Autowired
+    private JwtUtil jwtUtil;
     @Autowired
     private UserRepository userRepository;
     private static final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
@@ -39,26 +37,61 @@ public class UserService {
         return true;
     }
 
-    public void saveAdmin(User user) {
-        try {
+    public boolean saveAdmin(User user) {
+        try{
             user.setPassword(passwordEncoder.encode(user.getPassword()));
             user.setRoles(Arrays.asList("USER", "ADMIN"));
             userRepository.save(user);
+            return true;
         } catch (Exception e) {
             log.error("Error", e);
+            return false;
         }
     }
 
+    // Method to create a Club President
+    public boolean createPresident(User user) {
+        try {
+            // Check if username already exists to prevent overriding
+            if (userRepository.findByUsername(user.getUsername()).isPresent()) {
+                return false;
+            }
+
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
+            // Give them both roles so they can still act like a normal user if they want
+            user.setRoles(Arrays.asList("USER", "PRESIDENT"));
+
+            userRepository.save(user);
+            return true;
+        } catch (Exception e) {
+            log.error("Error creating president", e);
+            return false;
+        }
+    }
+    // Make sure to autowire JwtUtil at the top of your UserService:
+
+
+    // Update your signin method:
     public ResponseEntity<?> signin(LoginRequest loginRequest) {
         Optional<User> byUsername = userRepository.findByUsername(loginRequest.getUsername());
         if (byUsername.isPresent()) {
             if (passwordEncoder.matches(loginRequest.getPassword(), byUsername.get().getPassword())) {
-                return new ResponseEntity<>(byUsername.get(), HttpStatusCode.valueOf(200));
+
+                // 1. Generate the token!
+                String token = jwtUtil.generateToken(loginRequest.getUsername());
+
+                // 2. We need to send both the User AND the token back to React.
+                // An easy way is to use a Map:
+                Map<String, Object> response = new HashMap<>();
+                response.put("user", byUsername.get());
+                response.put("token", token);
+
+                return new ResponseEntity<>(response, HttpStatus.OK);
             } else {
-                return new ResponseEntity<>(HttpStatusCode.valueOf(401));
+                return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
             }
         }
-        return new ResponseEntity<>(HttpStatusCode.valueOf(404));
+        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 
     public boolean changeBio(User user) {

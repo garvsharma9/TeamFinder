@@ -13,10 +13,24 @@ public class EventService {
     @Autowired
     private EventRepository eventRepository;
 
-    public List<Event> eventsList()
-    {
-        List<Event> events = eventRepository.getEvents();
-        return events;
+    public List<Event> getAllEvents() {
+        return eventRepository.findAll();
     }
 
+    public boolean saveEvent(Event event) {
+        try {
+            eventRepository.save(event);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public boolean deleteEvent(String id) {
+        if (eventRepository.existsById(id)) {
+            eventRepository.deleteById(id);
+            return true;
+        }
+        return false;
+    }
 }
