@@ -232,4 +232,25 @@ public class UserService {
         }
         return false;
     }
+    public boolean updateUserProfile(String username, User updatedData) {
+        Optional<User> userOpt = userRepository.findByUsername(username);
+
+        if (userOpt.isPresent()) {
+            User existingUser = userOpt.get();
+
+            // Update fields only if they were provided in the request
+            if (updatedData.getName() != null) existingUser.setName(updatedData.getName());
+            if (updatedData.getBio() != null) existingUser.setBio(updatedData.getBio());
+            if (updatedData.getBranch() != null) existingUser.setBranch(updatedData.getBranch());
+            if (updatedData.getCollege() != null) existingUser.setCollege(updatedData.getCollege());
+            if (updatedData.getExperienceTag() != null) existingUser.setExperienceTag(updatedData.getExperienceTag());
+
+            // For arrays/lists like skills, we can directly overwrite
+            if (updatedData.getSkill() != null) existingUser.setSkill(updatedData.getSkill());
+
+            userRepository.save(existingUser);
+            return true;
+        }
+        return false;
+    }
 }
