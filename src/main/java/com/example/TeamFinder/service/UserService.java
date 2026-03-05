@@ -22,11 +22,6 @@ public class UserService {
     private JwtUtil jwtUtil;
     @Autowired
     private UserRepository userRepository;
-
-    @Autowired
-    private OtpService otpService;
-    @Autowired
-    private EmailService emailService;
     private static final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     // get user profile for dashboard rendering
@@ -236,80 +231,5 @@ public class UserService {
             return true;
         }
         return false;
-    }
-    public boolean updateUserProfile(String username, User updatedData) {
-        Optional<User> userOpt = userRepository.findByUsername(username);
-
-        if (userOpt.isPresent()) {
-            User existingUser = userOpt.get();
-
-            // Update fields only if they were provided in the request
-            if (updatedData.getName() != null) existingUser.setName(updatedData.getName());
-            if (updatedData.getBio() != null) existingUser.setBio(updatedData.getBio());
-            if (updatedData.getBranch() != null) existingUser.setBranch(updatedData.getBranch());
-            if (updatedData.getCollege() != null) existingUser.setCollege(updatedData.getCollege());
-            if (updatedData.getExperienceTag() != null) existingUser.setExperienceTag(updatedData.getExperienceTag());
-
-            // For arrays/lists like skills, we can directly overwrite
-            if (updatedData.getSkill() != null) existingUser.setSkill(updatedData.getSkill());
-
-            userRepository.save(existingUser);
-            return true;
-        }
-        return false;
-    }
-
-    public ResponseEntity<?> initiateLogin(LoginRequest loginRequest) {
-        Optional<User> byUsername = userRepository.findByUsername(loginRequest.getUsername());
-
-        if (byUsername.isPresent()) {
-            User user = byUsername.get();
-            if (passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
-
-                // Check if user has an email registered
-                if (user.getEmail() == null || user.getEmail().isEmpty()) {
-                    return new ResponseEntity<>("No email registered for this account.", HttpStatus.BAD_REQUEST);
-                }
-
-                // Generate and send OTP
-                String otp = otpService.generateAndStoreOtp(user.getEmail());
-                emailService.sendOtpEmail(user.getEmail(), otp);
-
-                // Return success, but DO NOT send the JWT token yet!
-                Map<String, String> response = new HashMap<>();
-                response.put("message", "OTP sent successfully");
-                response.put("email", user.getEmail()); // Send masked email to React if you want
-
-                return new ResponseEntity<>(response, HttpStatus.OK);
-            } else {
-                return new ResponseEntity<>("Invalid password", HttpStatus.UNAUTHORIZED);
-            }
-        }
-        return new ResponseEntity<>("User not found", HttpStatus.NOT_FOUND);
-    }
-
-    public ResponseEntity<?> verifyLoginOtp(String username, String otp) {
-        Optional<User> byUsername = userRepository.findByUsername(username);
-
-        if (byUsername.isPresent()) {
-            User user = byUsername.get();
-
-            // Validate the OTP against the user's email
-            boolean isValid = otpService.validateOtp(user.getEmail(), otp);
-
-            if (isValid) {
-                // Generate the JWT Token!
-                String token = jwtUtil.generateToken(user.getUsername());
-
-                Map<String, Object> response = new HashMap<>();
-                response.put("user", user);
-                response.put("token", token);
-
-                return new ResponseEntity<>(response, HttpStatus.OK);
-            } else {
-                return new ResponseEntity<>("Invalid or expired OTP", HttpStatus.UNAUTHORIZED);
-            }
-        }
-        return new ResponseEntity<>("User not found", HttpStatus.NOT_FOUND);
     }
 }

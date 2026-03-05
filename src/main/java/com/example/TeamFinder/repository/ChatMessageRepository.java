@@ -8,7 +8,5 @@ import java.util.List;
 
 @Repository
 public interface ChatMessageRepository extends MongoRepository<ChatMessage, String> {
-
-    // This will let us easily grab all chat history for a specific team, ordered by time
     List<ChatMessage> findByTeamIdOrderByTimestampAsc(String teamId);
 }

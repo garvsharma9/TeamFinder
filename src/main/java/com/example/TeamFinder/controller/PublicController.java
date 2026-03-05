@@ -14,8 +14,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
-
 
 @RestController
 @RequestMapping("/public")
@@ -36,28 +34,12 @@ public class PublicController {
         userService.signup(user);
         return new ResponseEntity<>(HttpStatus.valueOf(200));
     }
-//    @PostMapping("/signin")
-//    public ResponseEntity<?> signin(@RequestBody LoginRequest loginRequest)
-//    {
-//
-//        ResponseEntity<?> signin = userService.signin(loginRequest);
-//        return signin;
-//    }
-    // 1. This catches the initial username/password from React
     @PostMapping("/signin")
-    public ResponseEntity<?> signin(@RequestBody LoginRequest loginRequest) {
-        // Calls the new method we just added to UserService
-        return userService.initiateLogin(loginRequest);
-    }
+    public ResponseEntity<?> signin(@RequestBody LoginRequest loginRequest)
+    {
 
-    // 2. This catches the 6-digit OTP from React
-    @PostMapping("/verify-login")
-    public ResponseEntity<?> verifyLogin(@RequestBody Map<String, String> request) {
-        String username = request.get("username");
-        String otp = request.get("otp");
-
-        // Calls the second new method we added to UserService
-        return userService.verifyLoginOtp(username, otp);
+        ResponseEntity<?> signin = userService.signin(loginRequest);
+        return signin;
     }
 
 }
