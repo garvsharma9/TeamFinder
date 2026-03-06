@@ -6,39 +6,39 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 
-@Document("chat_messages")
+@Document("private_messages")
 @Data
-public class ChatMessage {
+public class PrivateMessage {
 
     @Id
     private String id;
-
-    // The ID of the Post/Team this message belongs to
-    private String teamId;
-
+    private String participantsKey;
     private String senderUsername;
+    private String receiverUsername;
     private String content;
     private LocalDateTime timestamp;
 
-    // Constructors
-    public ChatMessage() {}
+    public PrivateMessage() {}
 
-    public ChatMessage(String teamId, String senderUsername, String content, LocalDateTime timestamp) {
-        this.teamId = teamId;
+    public PrivateMessage(String participantsKey, String senderUsername, String receiverUsername, String content, LocalDateTime timestamp) {
+        this.participantsKey = participantsKey;
         this.senderUsername = senderUsername;
+        this.receiverUsername = receiverUsername;
         this.content = content;
         this.timestamp = timestamp;
     }
 
-    // --- GETTERS AND SETTERS ---
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 
-    public String getTeamId() { return teamId; }
-    public void setTeamId(String teamId) { this.teamId = teamId; }
+    public String getParticipantsKey() { return participantsKey; }
+    public void setParticipantsKey(String participantsKey) { this.participantsKey = participantsKey; }
 
     public String getSenderUsername() { return senderUsername; }
     public void setSenderUsername(String senderUsername) { this.senderUsername = senderUsername; }
+
+    public String getReceiverUsername() { return receiverUsername; }
+    public void setReceiverUsername(String receiverUsername) { this.receiverUsername = receiverUsername; }
 
     public String getContent() { return content; }
     public void setContent(String content) { this.content = content; }
