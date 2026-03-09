@@ -15,7 +15,7 @@ public class CorsConfig {
             public void addCorsMappings(CorsRegistry registry) {
                 // This allows frontend requests to hit your signup, sign-in, and dashboard endpoints
                 registry.addMapping("/**")
-                        .allowedOrigins("https://your-project-name.vercel.app") // Replace with your exact Vercel URL
+                        .allowedOrigins("https://team-finder-frontend-87ep.vercel.app") // Replace with your exact Vercel URL
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
                         .allowCredentials(true);
