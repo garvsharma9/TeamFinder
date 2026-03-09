@@ -47,10 +47,6 @@ public class SecurityConfig {
 
                         .anyRequest().authenticated()
                 )
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/public/**", "/user/signup").permitAll()
-                        .anyRequest().authenticated()
-                )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
