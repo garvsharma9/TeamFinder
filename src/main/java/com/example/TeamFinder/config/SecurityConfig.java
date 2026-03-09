@@ -35,7 +35,8 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         http
-                .cors(Customizer.withDefaults())
+//                .cors(Customizer.withDefaults())
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         // 1. ADD "/error" TO THIS LIST to stop the redirect trap
@@ -44,6 +45,10 @@ public class SecurityConfig {
                         // 2. USE "hasAnyAuthority" TO CATCH BOTH PREFIX FORMATS
                         .requestMatchers("/events/add", "/events/delete/**").hasAnyAuthority("PRESIDENT", "ROLE_PRESIDENT")
 
+                        .anyRequest().authenticated()
+                )
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/public/**", "/user/signup").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -55,12 +60,19 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173", "http://localhost:3000"));
+
+        // Your exact Vercel URL (Make sure there is NO trailing slash at the end!)
+        configuration.setAllowedOrigins(List.of("https://team-finder-frontend-87ep.vercel.app"));
+
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
+
+        // Specifically allow these headers (safer than "*" when credentials are true)
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept"));
+
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        // Apply these rules to all API endpoints
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
