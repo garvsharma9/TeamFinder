@@ -58,7 +58,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         // Your exact Vercel URL (Make sure there is NO trailing slash at the end!)
-        configuration.setAllowedOrigins(List.of("https://team-finder-frontend-87ep.vercel.app"));
+        configuration.setAllowedOrigins(List.of("https://team-finder-frontend-87ep.vercel.app", "http://localhost:5173",  "http://localhost:3000"));
 
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
 
