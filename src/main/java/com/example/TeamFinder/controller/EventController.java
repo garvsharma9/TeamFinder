@@ -41,4 +41,23 @@ public class EventController {
         }
         return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
+    @PostMapping("/{eventId}/like")
+    public ResponseEntity<?> likeEvent(@PathVariable String eventId, @RequestParam String username) {
+        try {
+            eventService.likeEvent(eventId, username);
+            return ResponseEntity.ok("Event liked successfully");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/{eventId}/dislike")
+    public ResponseEntity<?> dislikeEvent(@PathVariable String eventId, @RequestParam String username) {
+        try {
+            eventService.dislikeEvent(eventId, username);
+            return ResponseEntity.ok("Event disliked successfully");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 }

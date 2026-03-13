@@ -1,9 +1,13 @@
 package com.example.TeamFinder.entity;
 
+import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.List;
+
 @Document("events")
+@Data
 public class Event {
 
     @Id
@@ -15,10 +19,10 @@ public class Event {
     private int maxTeamSize;     // e.g., 4
     private String prizePool;    // e.g., "$5,000"
     private String venue;        // e.g., "Main Auditorium"
-
-    private String postedBy;     // Username of the President who posted it
+    private String postedBy;     // Username of the President who powsted it
     private String clubName;     // e.g., "Computer Science Society"
-
+    private List<String> like;
+    private List<String> dislike;
     // --- Generate Getters and Setters here ---
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
