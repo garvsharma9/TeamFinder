@@ -22,6 +22,6 @@ public class WebSocketConfig implements WebSocketConfigurer {
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(teamChatWebSocketHandler, "/ws-chat")
                 .addInterceptors(chatHandshakeInterceptor)
-                .setAllowedOrigins("http://localhost:5173", "http://localhost:3000");
+                .setAllowedOrigins("*");
     }
 }
