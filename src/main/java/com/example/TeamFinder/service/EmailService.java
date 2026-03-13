@@ -71,4 +71,40 @@ public class EmailService {
             e.printStackTrace(); // This will print the exact reason if it fails
         }
     }
+
+    public void sendUnreadMessageAlert(String toEmail, String receiverName, String senderUsername) {
+        String url = "https://api.brevo.com/v3/smtp/email";
+        RestTemplate restTemplate = new RestTemplate();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("api-key", brevoApiKey);
+
+        Map<String, Object> sender = Map.of("name", "TeamFinder", "email", senderEmail);
+        Map<String, Object> to = Map.of("email", toEmail);
+
+        Map<String, Object> requestBody = Map.of(
+                "sender", sender,
+                "to", List.of(to),
+                "subject", "New message from @" + senderUsername + " on TeamFinder!",
+                "htmlContent", "<div style='font-family: Arial, sans-serif; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; max-width: 500px;'>" +
+                        "<h2 style='color: #0a66c2;'>TeamFinder Chat</h2>" +
+                        "<p style='font-size: 16px; color: #444;'>Hi <b>" + receiverName + "</b>,</p>" +
+                        "<p style='font-size: 16px; color: #444;'>You just received a new message from <b>@" + senderUsername + "</b> while you were away.</p>" +
+                        "<div style='margin: 25px 0;'>" +
+                        "<a href='http://localhost:5173/chat' style='background-color: #0a66c2; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;'>Reply to Message</a>" +
+                        "</div>" +
+                        "<p style='font-size: 13px; color: #888;'>This is an automated notification because you are currently offline.</p>" +
+                        "</div>"
+        );
+
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+
+        try {
+            restTemplate.postForEntity(url, entity, String.class);
+            System.out.println("✅ Chat notification sent to " + toEmail);
+        } catch (Exception e) {
+            System.err.println("❌ Failed to send chat email: " + e.getMessage());
+        }
+    }
 }

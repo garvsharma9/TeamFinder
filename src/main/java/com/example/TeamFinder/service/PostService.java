@@ -20,6 +20,7 @@ public class PostService {
     @Autowired
     private UserRepository userRepository;
 
+
     public boolean savePost(Post post) {
         Post savedPost = postRepository.save(post);
 
@@ -85,9 +86,9 @@ public class PostService {
     // ... (Keep your existing savePost, deletePost, like, and dislike methods) ...
 
     // 1. Fetch all posts so we can display them on a "Feed" page
-    public List<Post> getAllPosts() {
-        return postRepository.findAll();
-    }
+//    public List<Post> getAllPosts() {
+//        return postRepository.findAll();
+//    }
 
     // 2. A user sends a request to join a team
     public boolean requestToJoin(String postId, String requesterUsername) {
@@ -160,6 +161,34 @@ public class PostService {
             if (post.getRequestedUsernames() != null) {
                 post.getRequestedUsernames().remove(targetUsername);
                 postRepository.save(post);
+                return true;
+            }
+        }
+        return false;
+    }
+
+
+
+    // 1. Updated get all posts (Attaches the photo!)
+    public List<Post> getAllPosts() {
+        List<Post> posts = postRepository.findAll();
+
+        for (Post post : posts) {
+            userRepository.findByUsername(post.getUsername()).ifPresent(user -> {
+                post.setProfilePictureUrl(user.getProfilePictureUrl());
+            });
+        }
+        return posts;
+    }
+
+    // 2. Updated delete method (Adds security!)
+    public boolean deletePost(String postId, String requesterUsername) {
+        Optional<Post> postOpt = postRepository.findById(postId);
+        if (postOpt.isPresent()) {
+            Post post = postOpt.get();
+            // Security check: Only the post owner can delete it
+            if (post.getUsername().equals(requesterUsername)) {
+                postRepository.deleteById(postId);
                 return true;
             }
         }

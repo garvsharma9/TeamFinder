@@ -14,3 +14,8 @@ app:
 brevo:
   api-key: ${BREVO_API_KEY}
   sender-email: ${BREVO_SENDER_EMAIL}
+# Cloudinary Configuration
+cloudinary:
+  cloud-name: ${CLOUD_NAME}
+  api-key: ${CLOUDINARY_API_KEY}
+  api-secret: ${CLOUDINARY_API_SECRET}

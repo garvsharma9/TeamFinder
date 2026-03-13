@@ -28,13 +28,13 @@ public class PostEntryController {
         }
     }
 
-    // Changed to PathVariable for standard DELETE structure
-    @DeleteMapping("/delete-post/{postId}")
-    public ResponseEntity<?> deletePost(@PathVariable String postId) {
-        boolean success = postService.deletePost(postId);
-        if (success) return new ResponseEntity<>(HttpStatus.OK);
-        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-    }
+//    // Changed to PathVariable for standard DELETE structure
+//    @DeleteMapping("/delete-post/{postId}")
+//    public ResponseEntity<?> deletePost(@PathVariable String postId) {
+//        boolean success = postService.deletePost(postId);
+//        if (success) return new ResponseEntity<>(HttpStatus.OK);
+//        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+//    }
 
     // Changed to PathVariable (URLs like /post/like/12345 are much cleaner)
     @PutMapping("/like/{postId}")
@@ -94,5 +94,13 @@ public class PostEntryController {
             return new ResponseEntity<>(HttpStatus.OK);
         }
         return new ResponseEntity<>("Action not allowed", HttpStatus.FORBIDDEN);
+    }
+
+    @DeleteMapping("/delete-post/{postId}")
+    public ResponseEntity<?> deletePost(@PathVariable String postId, org.springframework.security.core.Authentication auth) {
+        // We pass the logged-in username to the service to verify ownership
+        boolean success = postService.deletePost(postId, auth.getName());
+        if (success) return new ResponseEntity<>(HttpStatus.OK);
+        return new ResponseEntity<>("Unauthorized or Post not found", HttpStatus.FORBIDDEN);
     }
 }

@@ -20,6 +20,10 @@ public class PrivateMessageService {
     @Autowired
     private UserRepository userRepository;
 
+    // INJECT THE EMAIL SERVICE
+    @Autowired
+    private EmailService emailService; // Change from EmailNotificationService to EmailService
+
     public Optional<PrivateMessage> sendPrivateMessage(String senderUsername, String receiverUsername, String content) {
         String sender = resolveCanonicalUsername(senderUsername);
         String receiver = resolveCanonicalUsername(receiverUsername);
@@ -31,7 +35,23 @@ public class PrivateMessageService {
 
         String key = conversationKey(sender, receiver);
         PrivateMessage message = new PrivateMessage(key, sender, receiver, trimmedContent, LocalDateTime.now());
-        return Optional.of(privateMessageRepository.save(message));
+
+        // 1. Save the message to MongoDB
+        PrivateMessage savedMessage = privateMessageRepository.save(message);
+
+        // 2. Check if the receiver is offline
+        User receiverUser = userRepository.findByUsername(receiver).orElse(null);
+        if (receiverUser != null && !receiverUser.isOnline()) {
+            String receiverName = receiverUser.getName() != null ? receiverUser.getName() : receiverUser.getUsername();
+            // Call the new method we just added to EmailService
+            emailService.sendUnreadMessageAlert(
+                    receiverUser.getEmail(),
+                    receiverName,
+                    sender
+            );
+        }
+
+        return Optional.of(savedMessage);
     }
 
     public Optional<List<PrivateMessage>> getMessages(String myUsername, String otherUsername) {

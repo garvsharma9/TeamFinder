@@ -35,7 +35,13 @@ public class Post {
     // --- GETTERS AND SETTERS ---
     // If you are using Lombok, you can just add @Data at the top of the class and remove these.
     // Otherwise, generate the standard getters and setters for all the fields above!
+    // Add this with your other variables
+    @org.springframework.data.annotation.Transient
+    private String profilePictureUrl;
 
+    // Add Getter and Setter at the bottom
+    public String getProfilePictureUrl() { return profilePictureUrl; }
+    public void setProfilePictureUrl(String profilePictureUrl) { this.profilePictureUrl = profilePictureUrl; }
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 

@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
 
@@ -344,5 +345,123 @@ public class UserService {
         // Encode and save the new password
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
+    }
+    @Autowired
+    private CloudinaryService cloudinaryService;
+
+    public String updateProfilePicture(String username, MultipartFile file) throws Exception {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        String imageUrl = cloudinaryService.uploadImage(file);
+        user.setProfilePictureUrl(imageUrl);
+        userRepository.save(user);
+
+        return imageUrl;
+    }
+
+    public String updateBannerPicture(String username, MultipartFile file) throws Exception {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        String imageUrl = cloudinaryService.uploadImage(file);
+        user.setBannerPictureUrl(imageUrl);
+        userRepository.save(user);
+
+        return imageUrl;
+    }
+
+
+    public void sendConnectionRequest(String senderUsername, String targetUsername) {
+        if (senderUsername.equals(targetUsername)) throw new RuntimeException("Cannot connect with yourself");
+
+        User sender = userRepository.findByUsername(senderUsername).orElseThrow();
+        User target = userRepository.findByUsername(targetUsername).orElseThrow();
+
+        // Safety check for null lists
+        if (sender.getConnectionRequestsSent() == null) sender.setConnectionRequestsSent(new ArrayList<>());
+        if (target.getConnectionRequestsReceived() == null) target.setConnectionRequestsReceived(new ArrayList<>());
+        if (sender.getConnections() == null) sender.setConnections(new ArrayList<>());
+
+        // Don't send if already connected or pending
+        if (sender.getConnections().contains(targetUsername) || sender.getConnectionRequestsSent().contains(targetUsername)) {
+            return;
+        }
+
+        sender.getConnectionRequestsSent().add(targetUsername);
+        target.getConnectionRequestsReceived().add(senderUsername);
+
+        userRepository.save(sender);
+        userRepository.save(target);
+    }
+
+    public void acceptConnectionRequest(String receiverUsername, String senderUsername) {
+        User receiver = userRepository.findByUsername(receiverUsername).orElseThrow();
+        User sender = userRepository.findByUsername(senderUsername).orElseThrow();
+
+        // Initialize connection lists
+        if (receiver.getConnections() == null) receiver.setConnections(new ArrayList<>());
+        if (sender.getConnections() == null) sender.setConnections(new ArrayList<>());
+
+        // Add to each other's connections
+        receiver.getConnections().add(senderUsername);
+        sender.getConnections().add(receiverUsername);
+
+        // Remove from pending requests
+        if (receiver.getConnectionRequestsReceived() != null) receiver.getConnectionRequestsReceived().remove(senderUsername);
+        if (sender.getConnectionRequestsSent() != null) sender.getConnectionRequestsSent().remove(receiverUsername);
+
+        userRepository.save(receiver);
+        userRepository.save(sender);
+    }
+
+    public void rejectConnectionRequest(String receiverUsername, String senderUsername) {
+        User receiver = userRepository.findByUsername(receiverUsername).orElseThrow();
+        User sender = userRepository.findByUsername(senderUsername).orElseThrow();
+
+        // Just remove from pending requests without connecting
+        if (receiver.getConnectionRequestsReceived() != null) receiver.getConnectionRequestsReceived().remove(senderUsername);
+        if (sender.getConnectionRequestsSent() != null) sender.getConnectionRequestsSent().remove(receiverUsername);
+
+        userRepository.save(receiver);
+        userRepository.save(sender);
+    }
+
+    public List<User> getPendingRequests(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        List<String> requesters = user.getConnectionRequestsReceived();
+        List<User> pendingUsers = new ArrayList<>();
+
+        if (requesters != null) {
+            for (String reqUsername : requesters) {
+                userRepository.findByUsername(reqUsername).ifPresent(u -> {
+                    u.setPassword(null); // NEVER send passwords to the frontend!
+//                    u.setResetOtp(null);
+                    pendingUsers.add(u);
+                });
+            }
+        }
+        return pendingUsers;
+    }
+
+    public List<User> getMyConnections(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        List<String> connections = user.getConnections();
+        List<User> connectedUsers = new ArrayList<>();
+
+        if (connections != null) {
+            for (String connUsername : connections) {
+                userRepository.findByUsername(connUsername).ifPresent(u -> {
+                    u.setPassword(null); // Keep it secure
+//                    u.setResetOtp(null);
+                    connectedUsers.add(u);
+                });
+            }
+        }
+        return connectedUsers;
     }
 }

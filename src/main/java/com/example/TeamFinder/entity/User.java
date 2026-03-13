@@ -28,9 +28,16 @@ public class User {
     private List<String> posts;
     private String experienceTag; // "Beginner", "Intermediate", "Pro"
     private int likesReceived; // Increases when a team leader likes their profile
-
+    // --- Online Status ---
+    private boolean isOnline;
     // Add this new field to your User.java class
     private List<String> likedBy;
+    private String profilePictureUrl;
+    private String bannerPictureUrl;
+    // --- Connection Tracking ---
+    private List<String> connections; // People who have mutually accepted
+    private List<String> connectionRequestsSent; // People I want to connect with
+    private List<String> connectionRequestsReceived; // People who want to connect with me
 
 // Make sure to add the Getter and Setter for it if you aren't using Lombok's @Data!
 }
