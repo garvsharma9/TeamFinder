@@ -312,4 +312,37 @@ public class UserService {
         }
         return new ResponseEntity<>("User not found", HttpStatus.NOT_FOUND);
     }
+
+    // Add these imports if you don't have them
+    // import org.springframework.security.crypto.password.PasswordEncoder;
+    // import java.util.Map;
+
+    public String requestPasswordReset(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        String email = user.getEmail();
+        String otp = otpService.generateAndStoreOtp(email);
+
+        // Ensure you call your email service here to actually send the OTP!
+         emailService.sendOtpEmail(email, otp);
+
+        // Return masked email (e.g., g***9@gmail.com) for the UI
+        return email.replaceAll("(^[^@]{1,3})[^@]*(@.*$)", "$1***$2");
+    }
+
+    public void resetPassword(String username, String otp, String newPassword) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // This uses your existing in-memory ConcurrentHashMap logic!
+        boolean isValid = otpService.validateOtp(user.getEmail(), otp);
+        if (!isValid) {
+            throw new RuntimeException("Invalid or expired OTP");
+        }
+
+        // Encode and save the new password
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
 }

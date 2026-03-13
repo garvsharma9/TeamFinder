@@ -60,4 +60,28 @@ public class PublicController {
         return userService.verifyLoginOtp(username, otp);
     }
 
+
+    @PostMapping("/forgot-password/request")
+    public ResponseEntity<?> requestPasswordReset(@RequestBody Map<String, String> payload) {
+        try {
+            String maskedEmail = userService.requestPasswordReset(payload.get("username"));
+            return ResponseEntity.ok(Map.of("email", maskedEmail));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/forgot-password/reset")
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> payload) {
+        try {
+            userService.resetPassword(
+                    payload.get("username"),
+                    payload.get("otp"),
+                    payload.get("newPassword")
+            );
+            return ResponseEntity.ok("Password reset successfully");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 }
