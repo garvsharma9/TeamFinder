@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RequestMapping("/post")
@@ -58,6 +59,11 @@ public class PostEntryController {
         return new ResponseEntity<>(postService.getAllPosts(), HttpStatus.OK);
     }
 
+    @GetMapping("/feed")
+    public ResponseEntity<?> getFeedPosts() {
+        return new ResponseEntity<>(postService.getFeedPosts(), HttpStatus.OK);
+    }
+
     // A user clicks "Request to Join" on the frontend
     @PostMapping("/{postId}/request")
     public ResponseEntity<?> requestToJoin(@PathVariable String postId, @RequestParam String requesterUsername) {
@@ -96,11 +102,38 @@ public class PostEntryController {
         return new ResponseEntity<>("Action not allowed", HttpStatus.FORBIDDEN);
     }
 
-    @DeleteMapping("/delete-post/{postId}")
-    public ResponseEntity<?> deletePost(@PathVariable String postId, org.springframework.security.core.Authentication auth) {
-        // We pass the logged-in username to the service to verify ownership
-        boolean success = postService.deletePost(postId, auth.getName());
+    @PostMapping("/{postId}/remove-member")
+    public ResponseEntity<?> removeMember(
+            @PathVariable String postId,
+            @RequestParam String targetUsername,
+            Authentication auth) {
+
+        boolean success = postService.removeMember(postId, auth.getName(), targetUsername);
+        if (success) {
+            return new ResponseEntity<>(HttpStatus.OK);
+        }
+        return new ResponseEntity<>("Action not allowed", HttpStatus.FORBIDDEN);
+    }
+
+    @DeleteMapping("/delete-feed-post/{postId}")
+    public ResponseEntity<?> deleteFeedPost(@PathVariable String postId, Authentication auth) {
+        boolean success = postService.removePostFromFeed(postId, auth.getName());
         if (success) return new ResponseEntity<>(HttpStatus.OK);
         return new ResponseEntity<>("Unauthorized or Post not found", HttpStatus.FORBIDDEN);
+    }
+
+    @DeleteMapping("/delete-team/{postId}")
+    public ResponseEntity<?> deleteTeam(@PathVariable String postId, Authentication auth) {
+        boolean success = postService.deleteTeam(postId, auth.getName());
+        if (success) return new ResponseEntity<>(HttpStatus.OK);
+        return new ResponseEntity<>("Unauthorized or Team not found", HttpStatus.FORBIDDEN);
+    }
+
+    @DeleteMapping("/delete-post/{postId}")
+    public ResponseEntity<?> deletePost(@PathVariable String postId, Authentication auth) {
+        // Backward-compatible team deletion route.
+        boolean success = postService.deleteTeam(postId, auth.getName());
+        if (success) return new ResponseEntity<>(HttpStatus.OK);
+        return new ResponseEntity<>("Unauthorized or Team not found", HttpStatus.FORBIDDEN);
     }
 }

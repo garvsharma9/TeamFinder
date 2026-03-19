@@ -149,6 +149,17 @@ public class UserController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    @PostMapping("/connect/remove/{targetUsername}")
+    public ResponseEntity<?> removeConnection(@PathVariable String targetUsername, Authentication auth) {
+        try {
+            userService.removeConnection(auth.getName(), targetUsername);
+            return ResponseEntity.ok("Connection removed");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     @GetMapping("/connect/pending")
     public ResponseEntity<?> getPendingRequests(Authentication auth) {
         try {

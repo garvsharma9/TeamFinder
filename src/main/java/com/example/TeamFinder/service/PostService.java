@@ -2,6 +2,7 @@ package com.example.TeamFinder.service;
 
 import com.example.TeamFinder.entity.Post;
 import com.example.TeamFinder.entity.User;
+import com.example.TeamFinder.repository.ChatMessageRepository;
 import com.example.TeamFinder.repository.PostRepository;
 import com.example.TeamFinder.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,8 +21,14 @@ public class PostService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private ChatMessageRepository chatMessageRepository;
+
 
     public boolean savePost(Post post) {
+        if (post.getVisibleInFeed() == null) {
+            post.setVisibleInFeed(true);
+        }
         Post savedPost = postRepository.save(post);
 
         Optional<User> userOpt = userRepository.findByUsername(post.getUsername());
@@ -43,17 +50,7 @@ public class PostService {
         if (postOpt.isPresent()) {
             Post post = postOpt.get();
 
-            // Remove the post ID from the User's list so it doesn't become orphaned
-            Optional<User> userOpt = userRepository.findByUsername(post.getUsername());
-            if (userOpt.isPresent()) {
-                User user = userOpt.get();
-                if (user.getPosts() != null) {
-                    user.getPosts().remove(postId);
-                    userRepository.save(user);
-                }
-            }
-
-            postRepository.delete(post);
+            deleteTeamResources(post);
             return true;
         }
         return false;
@@ -167,31 +164,112 @@ public class PostService {
         return false;
     }
 
+    public boolean removeMember(String postId, String ownerUsername, String targetUsername) {
+        Optional<Post> postOpt = postRepository.findById(postId);
+
+        if (postOpt.isPresent()) {
+            Post post = postOpt.get();
+
+            if (!matchesUser(post.getUsername(), ownerUsername) || matchesUser(post.getUsername(), targetUsername)) {
+                return false;
+            }
+
+            if (post.getAcceptedUsernames() == null) {
+                return false;
+            }
+
+            boolean removed = post.getAcceptedUsernames().removeIf(member -> matchesUser(member, targetUsername));
+            if (!removed) {
+                return false;
+            }
+
+            postRepository.save(post);
+            return true;
+        }
+        return false;
+    }
+
+    public List<Post> getFeedPosts() {
+        List<Post> posts = postRepository.findAll().stream()
+                .filter(this::isVisibleInFeed)
+                .toList();
+
+        attachProfilePictures(posts);
+        return posts;
+    }
 
 
     // 1. Updated get all posts (Attaches the photo!)
     public List<Post> getAllPosts() {
         List<Post> posts = postRepository.findAll();
 
+        attachProfilePictures(posts);
+        return posts;
+    }
+
+    public boolean removePostFromFeed(String postId, String requesterUsername) {
+        Optional<Post> postOpt = postRepository.findById(postId);
+        if (postOpt.isPresent()) {
+            Post post = postOpt.get();
+            if (matchesUser(post.getUsername(), requesterUsername)) {
+                post.setVisibleInFeed(false);
+                postRepository.save(post);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean deleteTeam(String postId, String requesterUsername) {
+        Optional<Post> postOpt = postRepository.findById(postId);
+        if (postOpt.isPresent()) {
+            Post post = postOpt.get();
+            if (matchesUser(post.getUsername(), requesterUsername)) {
+                deleteTeamResources(post);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void attachProfilePictures(List<Post> posts) {
         for (Post post : posts) {
             userRepository.findByUsername(post.getUsername()).ifPresent(user -> {
                 post.setProfilePictureUrl(user.getProfilePictureUrl());
             });
         }
-        return posts;
     }
 
-    // 2. Updated delete method (Adds security!)
-    public boolean deletePost(String postId, String requesterUsername) {
-        Optional<Post> postOpt = postRepository.findById(postId);
-        if (postOpt.isPresent()) {
-            Post post = postOpt.get();
-            // Security check: Only the post owner can delete it
-            if (post.getUsername().equals(requesterUsername)) {
-                postRepository.deleteById(postId);
-                return true;
-            }
+    private boolean isVisibleInFeed(Post post) {
+        return post.getVisibleInFeed() == null || Boolean.TRUE.equals(post.getVisibleInFeed());
+    }
+
+    private void deleteTeamResources(Post post) {
+        removePostIdFromOwner(post.getUsername(), post.getId());
+        chatMessageRepository.deleteByTeamId(post.getId());
+        postRepository.deleteById(post.getId());
+    }
+
+    private void removePostIdFromOwner(String username, String postId) {
+        Optional<User> userOpt = userRepository.findByUsername(username);
+        if (userOpt.isEmpty()) {
+            return;
         }
-        return false;
+
+        User user = userOpt.get();
+        if (user.getPosts() == null) {
+            return;
+        }
+
+        user.getPosts().removeIf(existingPostId -> normalize(existingPostId).equals(normalize(postId)));
+        userRepository.save(user);
+    }
+
+    private boolean matchesUser(String first, String second) {
+        return normalize(first).equals(normalize(second));
+    }
+
+    private String normalize(String value) {
+        return value == null ? "" : value.trim().toLowerCase();
     }
 }

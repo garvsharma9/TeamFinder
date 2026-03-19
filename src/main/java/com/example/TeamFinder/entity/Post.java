@@ -23,6 +23,7 @@ public class Post {
 
     // Team Details
     private String teamName; // This can be updated later!
+    private Boolean visibleInFeed = true;
 
     // Tracking lists for the team formation
     private List<String> requestedUsernames = new ArrayList<>();
@@ -62,6 +63,9 @@ public class Post {
 
     public String getTeamName() { return teamName; }
     public void setTeamName(String teamName) { this.teamName = teamName; }
+
+    public Boolean getVisibleInFeed() { return visibleInFeed; }
+    public void setVisibleInFeed(Boolean visibleInFeed) { this.visibleInFeed = visibleInFeed; }
 
     public List<String> getRequestedUsernames() { return requestedUsernames; }
     public void setRequestedUsernames(List<String> requestedUsernames) { this.requestedUsernames = requestedUsernames; }

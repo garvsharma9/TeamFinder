@@ -244,12 +244,11 @@ public class UserService {
         if (userOpt.isPresent()) {
             User existingUser = userOpt.get();
 
-            // Update fields only if they were provided in the request
+            // Profile edits should not directly control endorsement-derived level.
             if (updatedData.getName() != null) existingUser.setName(updatedData.getName());
             if (updatedData.getBio() != null) existingUser.setBio(updatedData.getBio());
             if (updatedData.getBranch() != null) existingUser.setBranch(updatedData.getBranch());
             if (updatedData.getCollege() != null) existingUser.setCollege(updatedData.getCollege());
-            if (updatedData.getExperienceTag() != null) existingUser.setExperienceTag(updatedData.getExperienceTag());
 
             // For arrays/lists like skills, we can directly overwrite
             if (updatedData.getSkill() != null) existingUser.setSkill(updatedData.getSkill());
@@ -326,7 +325,7 @@ public class UserService {
         String otp = otpService.generateAndStoreOtp(email);
 
         // Ensure you call your email service here to actually send the OTP!
-         emailService.sendOtpEmail(email, otp);
+        emailService.sendOtpEmail(email, otp);
 
         // Return masked email (e.g., g***9@gmail.com) for the UI
         return email.replaceAll("(^[^@]{1,3})[^@]*(@.*$)", "$1***$2");
@@ -380,12 +379,26 @@ public class UserService {
 
         // Safety check for null lists
         if (sender.getConnectionRequestsSent() == null) sender.setConnectionRequestsSent(new ArrayList<>());
+        if (sender.getConnectionRequestsReceived() == null) sender.setConnectionRequestsReceived(new ArrayList<>());
+        if (target.getConnectionRequestsSent() == null) target.setConnectionRequestsSent(new ArrayList<>());
         if (target.getConnectionRequestsReceived() == null) target.setConnectionRequestsReceived(new ArrayList<>());
         if (sender.getConnections() == null) sender.setConnections(new ArrayList<>());
+        if (target.getConnections() == null) target.setConnections(new ArrayList<>());
 
         // Don't send if already connected or pending
-        if (sender.getConnections().contains(targetUsername) || sender.getConnectionRequestsSent().contains(targetUsername)) {
+        if (
+                sender.getConnections().contains(targetUsername) ||
+                        target.getConnections().contains(senderUsername) ||
+                        sender.getConnectionRequestsSent().contains(targetUsername)
+        ) {
             return;
+        }
+
+        if (
+                sender.getConnectionRequestsReceived().contains(targetUsername) ||
+                        target.getConnectionRequestsSent().contains(senderUsername)
+        ) {
+            throw new RuntimeException("This user has already sent you a connection request");
         }
 
         sender.getConnectionRequestsSent().add(targetUsername);
@@ -402,14 +415,20 @@ public class UserService {
         // Initialize connection lists
         if (receiver.getConnections() == null) receiver.setConnections(new ArrayList<>());
         if (sender.getConnections() == null) sender.setConnections(new ArrayList<>());
+        if (receiver.getConnectionRequestsSent() == null) receiver.setConnectionRequestsSent(new ArrayList<>());
+        if (receiver.getConnectionRequestsReceived() == null) receiver.setConnectionRequestsReceived(new ArrayList<>());
+        if (sender.getConnectionRequestsSent() == null) sender.setConnectionRequestsSent(new ArrayList<>());
+        if (sender.getConnectionRequestsReceived() == null) sender.setConnectionRequestsReceived(new ArrayList<>());
 
         // Add to each other's connections
-        receiver.getConnections().add(senderUsername);
-        sender.getConnections().add(receiverUsername);
+        addUnique(receiver.getConnections(), senderUsername);
+        addUnique(sender.getConnections(), receiverUsername);
 
-        // Remove from pending requests
-        if (receiver.getConnectionRequestsReceived() != null) receiver.getConnectionRequestsReceived().remove(senderUsername);
-        if (sender.getConnectionRequestsSent() != null) sender.getConnectionRequestsSent().remove(receiverUsername);
+        // Remove pending requests in both directions so the relationship stays clean.
+        removeValue(receiver.getConnectionRequestsReceived(), senderUsername);
+        removeValue(sender.getConnectionRequestsSent(), receiverUsername);
+        removeValue(receiver.getConnectionRequestsSent(), senderUsername);
+        removeValue(sender.getConnectionRequestsReceived(), receiverUsername);
 
         userRepository.save(receiver);
         userRepository.save(sender);
@@ -419,12 +438,53 @@ public class UserService {
         User receiver = userRepository.findByUsername(receiverUsername).orElseThrow();
         User sender = userRepository.findByUsername(senderUsername).orElseThrow();
 
+        if (receiver.getConnectionRequestsSent() == null) receiver.setConnectionRequestsSent(new ArrayList<>());
+        if (receiver.getConnectionRequestsReceived() == null) receiver.setConnectionRequestsReceived(new ArrayList<>());
+        if (sender.getConnectionRequestsSent() == null) sender.setConnectionRequestsSent(new ArrayList<>());
+        if (sender.getConnectionRequestsReceived() == null) sender.setConnectionRequestsReceived(new ArrayList<>());
+
         // Just remove from pending requests without connecting
-        if (receiver.getConnectionRequestsReceived() != null) receiver.getConnectionRequestsReceived().remove(senderUsername);
-        if (sender.getConnectionRequestsSent() != null) sender.getConnectionRequestsSent().remove(receiverUsername);
+        removeValue(receiver.getConnectionRequestsReceived(), senderUsername);
+        removeValue(sender.getConnectionRequestsSent(), receiverUsername);
+        removeValue(receiver.getConnectionRequestsSent(), senderUsername);
+        removeValue(sender.getConnectionRequestsReceived(), receiverUsername);
 
         userRepository.save(receiver);
         userRepository.save(sender);
+    }
+
+    public void removeConnection(String username, String targetUsername) {
+        if (username.equals(targetUsername)) throw new RuntimeException("Cannot remove yourself");
+
+        User user = userRepository.findByUsername(username).orElseThrow();
+        User target = userRepository.findByUsername(targetUsername).orElseThrow();
+
+        if (user.getConnections() == null) user.setConnections(new ArrayList<>());
+        if (target.getConnections() == null) target.setConnections(new ArrayList<>());
+        if (user.getConnectionRequestsSent() == null) user.setConnectionRequestsSent(new ArrayList<>());
+        if (user.getConnectionRequestsReceived() == null) user.setConnectionRequestsReceived(new ArrayList<>());
+        if (target.getConnectionRequestsSent() == null) target.setConnectionRequestsSent(new ArrayList<>());
+        if (target.getConnectionRequestsReceived() == null) target.setConnectionRequestsReceived(new ArrayList<>());
+
+        removeValue(user.getConnections(), targetUsername);
+        removeValue(target.getConnections(), username);
+        removeValue(user.getConnectionRequestsSent(), targetUsername);
+        removeValue(user.getConnectionRequestsReceived(), targetUsername);
+        removeValue(target.getConnectionRequestsSent(), username);
+        removeValue(target.getConnectionRequestsReceived(), username);
+
+        userRepository.save(user);
+        userRepository.save(target);
+    }
+
+    private void addUnique(List<String> values, String value) {
+        if (!values.contains(value)) {
+            values.add(value);
+        }
+    }
+
+    private void removeValue(List<String> values, String value) {
+        values.removeIf(value::equals);
     }
 
     public List<User> getPendingRequests(String username) {

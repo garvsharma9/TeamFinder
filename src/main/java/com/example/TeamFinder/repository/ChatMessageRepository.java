@@ -11,4 +11,6 @@ public interface ChatMessageRepository extends MongoRepository<ChatMessage, Stri
 
     // This will let us easily grab all chat history for a specific team, ordered by time
     List<ChatMessage> findByTeamIdOrderByTimestampAsc(String teamId);
+
+    void deleteByTeamId(String teamId);
 }

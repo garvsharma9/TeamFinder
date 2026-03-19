@@ -92,7 +92,7 @@ public class EmailService {
                         "<p style='font-size: 16px; color: #444;'>Hi <b>" + receiverName + "</b>,</p>" +
                         "<p style='font-size: 16px; color: #444;'>You just received a new message from <b>@" + senderUsername + "</b> while you were away.</p>" +
                         "<div style='margin: 25px 0;'>" +
-                        "<a href='http://localhost:5173/chat' style='background-color: #0a66c2; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;'>Reply to Message</a>" +
+                        "<a href='https://team-finder-frontend-87ep.vercel.app/chat' style='background-color: #0a66c2; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;'>Reply to Message</a>" +
                         "</div>" +
                         "<p style='font-size: 13px; color: #888;'>This is an automated notification because you are currently offline.</p>" +
                         "</div>"
