@@ -4,6 +4,8 @@ import com.example.TeamFinder.entity.LoginRequest;
 import com.example.TeamFinder.entity.User;
 import com.example.TeamFinder.service.PublicService;
 import com.example.TeamFinder.service.UserService;
+import com.example.TeamFinder.util.JwtUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -14,17 +16,21 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
 
 @RestController
 @RequestMapping("/public")
+@Slf4j
 public class PublicController {
 
     @Autowired
     private PublicService publicService;
     @Autowired
     private UserService userService;
+    @Autowired
+    private JwtUtil jwtUtil;
     @GetMapping("/health-check")
     public ResponseEntity<?> heathCheck()
     {
@@ -59,7 +65,29 @@ public class PublicController {
         // Calls the second new method we added to UserService
         return userService.verifyLoginOtp(username, otp);
     }
+    @PostMapping("/auth/google")
+    public ResponseEntity<?> googleAuth(@RequestBody Map<String, String> payload) {
+        try {
+            String googleToken = payload.get("token");
 
+            // 1. Verify token and get/create user
+            User user = userService.verifyGoogleTokenAndGetUser(googleToken);
+
+            // 2. Generate YOUR app's standard JWT token for this user
+            String appJwtToken = jwtUtil.generateToken(user.getUsername());
+
+            // 3. Return both to the frontend, just like a normal login
+            Map<String, Object> response = new HashMap<>();
+            response.put("user", user);
+            response.put("token", appJwtToken);
+
+            return new ResponseEntity<>(response, HttpStatus.OK);
+
+        } catch (Exception e) {
+            log.error("Google Auth Failed", e);
+            return new ResponseEntity<>("Authentication failed", HttpStatus.UNAUTHORIZED);
+        }
+    }
 
     @PostMapping("/forgot-password/request")
     public ResponseEntity<?> requestPasswordReset(@RequestBody Map<String, String> payload) {

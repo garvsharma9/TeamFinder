@@ -6,6 +6,7 @@ import com.example.TeamFinder.repository.UserRepository;
 import com.example.TeamFinder.util.JwtUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
@@ -13,7 +14,10 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
 import java.util.*;
 
 @Slf4j
@@ -30,6 +34,60 @@ public class UserService {
     private EmailService emailService;
     private static final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
+
+
+    @Value("${google.client.id}")
+    private String googleClientId;
+// ... inside your UserService class:
+
+    // Replace with your actual Client ID from Google Cloud Console
+//    private static final String GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com";
+
+    public User verifyGoogleTokenAndGetUser(String idTokenString) throws Exception {
+        System.out.println("BACKEND EXPECTED CLIENT ID: [" + googleClientId + "]");
+        GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
+                .setAudience(Collections.singletonList(googleClientId))
+                .build();
+
+        GoogleIdToken idToken = verifier.verify(idTokenString);
+        if (idToken != null) {
+            GoogleIdToken.Payload payload = idToken.getPayload();
+
+            String email = payload.getEmail();
+            String name = (String) payload.get("name");
+            String pictureUrl = (String) payload.get("picture");
+
+            // Check if user already exists by EMAIL
+            Optional<User> existingUser = userRepository.findFirstByEmail(email);
+
+            if (existingUser.isPresent()) {
+                return existingUser.get(); // User exists, log them in
+            } else {
+                // User doesn't exist, create a new profile
+                User newUser = new User();
+                newUser.setEmail(email);
+                newUser.setName(name);
+                newUser.setProfilePictureUrl(pictureUrl);
+
+                // Generate a unique username from their email prefix
+                String baseUsername = email.split("@")[0].replaceAll("[^a-zA-Z0-9]", "");
+                String uniqueUsername = baseUsername;
+                int suffix = 1;
+                while (userRepository.findByUsername(uniqueUsername).isPresent()) {
+                    uniqueUsername = baseUsername + suffix;
+                    suffix++;
+                }
+                newUser.setUsername(uniqueUsername);
+
+                // Give them a random password since they use Google to log in
+                newUser.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
+
+                return userRepository.save(newUser);
+            }
+        } else {
+            throw new Exception("Invalid Google ID token.");
+        }
+    }
     // get user profile for dashboard rendering
     public ResponseEntity<?> getUserProfile(String id) {
         Optional<User> byUsername = userRepository.findByUsername(id);
