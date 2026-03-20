@@ -17,6 +17,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 
@@ -35,6 +36,23 @@ public class PublicController {
     public ResponseEntity<?> heathCheck()
     {
         return new ResponseEntity<>(publicService.healthCheck(), HttpStatusCode.valueOf(200));
+    }
+    @PostMapping("/auth/github")
+    public ResponseEntity<?> githubAuth(@RequestBody Map<String, String> payload) {
+        try {
+            String code = payload.get("code");
+            User user = userService.verifyGithubCodeAndGetUser(code);
+            String appJwtToken = jwtUtil.generateToken(user.getUsername());
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("user", user);
+            response.put("token", appJwtToken);
+
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ResponseEntity<>("GitHub Authentication failed", HttpStatus.UNAUTHORIZED);
+        }
     }
     @PostMapping("/signup")
     public ResponseEntity<?> signUp(@RequestBody User user)
@@ -110,6 +128,18 @@ public class PublicController {
             return ResponseEntity.ok("Password reset successfully");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // Add this inside PublicController.java
+    @GetMapping("/github/{username}/repos")
+    public ResponseEntity<?> getCachedGithubRepos(@PathVariable String username) {
+        List<?> repos = publicService.getGithubRepos(username);
+
+        if (repos != null) {
+            return ResponseEntity.ok(repos);
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("GitHub data not found or rate limited");
         }
     }
 }

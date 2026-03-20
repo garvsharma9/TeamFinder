@@ -7,12 +7,11 @@ import com.example.TeamFinder.util.JwtUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
@@ -42,6 +41,90 @@ public class UserService {
 
     // Replace with your actual Client ID from Google Cloud Console
 //    private static final String GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com";
+    @Value("${github.client.id}")
+    private String githubClientId;
+
+    @Value("${github.client.secret}")
+    private String githubClientSecret;
+
+    public User verifyGithubCodeAndGetUser(String code) throws Exception {
+        RestTemplate restTemplate = new RestTemplate();
+
+        // 1. Exchange code for Access Token
+        String tokenUrl = "https://github.com/login/oauth/access_token";
+        Map<String, String> tokenParams = new HashMap<>();
+        tokenParams.put("client_id", githubClientId);
+        tokenParams.put("client_secret", githubClientSecret);
+        tokenParams.put("code", code);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+        HttpEntity<Map<String, String>> tokenRequest = new HttpEntity<>(tokenParams, headers);
+
+        ResponseEntity<Map> tokenResponse = restTemplate.postForEntity(tokenUrl, tokenRequest, Map.class);
+        String accessToken = (String) tokenResponse.getBody().get("access_token");
+
+        if (accessToken == null) throw new Exception("Failed to retrieve GitHub access token");
+
+        // 2. Fetch User Profile
+        HttpHeaders authHeaders = new HttpHeaders();
+        authHeaders.setBearerAuth(accessToken);
+        HttpEntity<String> authEntity = new HttpEntity<>(authHeaders);
+
+        ResponseEntity<Map> profileResponse = restTemplate.exchange("https://api.github.com/user", HttpMethod.GET, authEntity, Map.class);
+        Map<String, Object> profile = profileResponse.getBody();
+
+        String name = (String) profile.get("name");
+        String avatarUrl = (String) profile.get("avatar_url");
+        String githubProfileUrl = (String) profile.get("html_url");
+
+        // 3. Fetch User Emails (GitHub requires a separate call for emails if they are private)
+        ResponseEntity<List> emailsResponse = restTemplate.exchange("https://api.github.com/user/emails", HttpMethod.GET, authEntity, List.class);
+        List<Map<String, Object>> emails = emailsResponse.getBody();
+
+        String primaryEmail = null;
+        for (Map<String, Object> emailObj : emails) {
+            if ((Boolean) emailObj.get("primary") && (Boolean) emailObj.get("verified")) {
+                primaryEmail = (String) emailObj.get("email");
+                break;
+            }
+        }
+
+        if (primaryEmail == null) throw new Exception("No verified primary email found on GitHub");
+
+        // 4. SMART MERGE LOGIC
+        Optional<User> existingUserOpt = userRepository.findFirstByEmail(primaryEmail);
+
+        if (existingUserOpt.isPresent()) {
+            User existingUser = existingUserOpt.get();
+            // If they don't have a GitHub URL yet, attach this one!
+            if (existingUser.getGithubUrl() == null || existingUser.getGithubUrl().isEmpty()) {
+                existingUser.setGithubUrl(githubProfileUrl);
+                return userRepository.save(existingUser);
+            }
+            return existingUser;
+        } else {
+            // User doesn't exist, create a new profile
+            User newUser = new User();
+            newUser.setEmail(primaryEmail);
+            newUser.setName(name != null ? name : "GitHub User");
+            newUser.setProfilePictureUrl(avatarUrl);
+            newUser.setGithubUrl(githubProfileUrl);
+
+            // Generate unique username
+            String baseUsername = primaryEmail.split("@")[0].replaceAll("[^a-zA-Z0-9]", "");
+            String uniqueUsername = baseUsername;
+            int suffix = 1;
+            while (userRepository.findByUsername(uniqueUsername).isPresent()) {
+                uniqueUsername = baseUsername + suffix;
+                suffix++;
+            }
+            newUser.setUsername(uniqueUsername);
+            newUser.setPassword(passwordEncoder.encode(UUID.randomUUID().toString())); // Random password
+
+            return userRepository.save(newUser);
+        }
+    }
 
     public User verifyGoogleTokenAndGetUser(String idTokenString) throws Exception {
         System.out.println("BACKEND EXPECTED CLIENT ID: [" + googleClientId + "]");
@@ -296,25 +379,31 @@ public class UserService {
         }
         return false;
     }
-    public boolean updateUserProfile(String username, User updatedData) {
+    // Change return type from boolean to User
+    public User updateUserProfile(String username, User updatedData) {
         Optional<User> userOpt = userRepository.findByUsername(username);
 
         if (userOpt.isPresent()) {
             User existingUser = userOpt.get();
 
-            // Profile edits should not directly control endorsement-derived level.
             if (updatedData.getName() != null) existingUser.setName(updatedData.getName());
             if (updatedData.getBio() != null) existingUser.setBio(updatedData.getBio());
             if (updatedData.getBranch() != null) existingUser.setBranch(updatedData.getBranch());
             if (updatedData.getCollege() != null) existingUser.setCollege(updatedData.getCollege());
 
-            // For arrays/lists like skills, we can directly overwrite
-            if (updatedData.getSkill() != null) existingUser.setSkill(updatedData.getSkill());
+            // These are correct!
+            if (updatedData.getLinkedinUrl() != null) existingUser.setLinkedinUrl(updatedData.getLinkedinUrl());
+            if (updatedData.getGithubUrl() != null) existingUser.setGithubUrl(updatedData.getGithubUrl());
 
-            userRepository.save(existingUser);
-            return true;
+            if (updatedData.getSkill() != null) {
+                existingUser.setSkill(normalizeSkills(updatedData.getSkill()));
+            }
+
+            // Save and RETURN the updated entity
+            return userRepository.save(existingUser);
         }
-        return false;
+        // Return null if user isn't found
+        return null;
     }
 
     public ResponseEntity<?> initiateLogin(LoginRequest loginRequest) {
@@ -581,5 +670,14 @@ public class UserService {
             }
         }
         return connectedUsers;
+    }
+
+    private List<String> normalizeSkills(List<String> skills) {
+        if (skills == null) return new ArrayList<>();
+        return skills.stream()
+                .map(String::toLowerCase)
+                .map(String::trim)
+                .distinct() // Removes duplicates like "React" and "react"
+                .toList();
     }
 }

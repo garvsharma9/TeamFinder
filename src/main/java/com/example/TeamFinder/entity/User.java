@@ -23,6 +23,7 @@ public class User {
     private String college;
     private String bio;
     private String branch;
+    @Indexed
     private List<String> skill;
     private List<String> roles;
     private List<String> posts;
@@ -38,6 +39,7 @@ public class User {
     private List<String> connections; // People who have mutually accepted
     private List<String> connectionRequestsSent; // People I want to connect with
     private List<String> connectionRequestsReceived; // People who want to connect with me
-
+    private String linkedinUrl;
+    private String githubUrl;
 // Make sure to add the Getter and Setter for it if you aren't using Lombok's @Data!
 }
