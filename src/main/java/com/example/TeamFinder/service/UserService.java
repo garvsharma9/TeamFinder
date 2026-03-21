@@ -292,7 +292,7 @@ public class UserService {
     }
 
     public List<User> searchUserByName(String name) {
-        return userRepository.findByName(name);
+        return userRepository.findByNameContainingIgnoreCase(name);
     }
 
     public Optional<User> searchUserByUsername(String username) {
@@ -300,7 +300,7 @@ public class UserService {
     }
 
     public List<User> searchUserBySkill(String skill) {
-        return userRepository.findBySkill(skill);
+        return userRepository.findBySkillContainingIgnoreCase(skill);
     }
 
     public boolean addSkill(User user) {
