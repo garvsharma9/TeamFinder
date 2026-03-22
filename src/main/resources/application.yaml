@@ -27,3 +27,5 @@ github:
   client:
     id: ${GITHUB_CLIENT_ID}
     secret: ${GITHUB_CLIENT_SECRET}
+  api:
+    token: ${GITHUB_API_TOKEN}
