@@ -5,6 +5,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -105,6 +106,83 @@ public class EmailService {
             System.out.println("✅ Chat notification sent to " + toEmail);
         } catch (Exception e) {
             System.err.println("❌ Failed to send chat email: " + e.getMessage());
+        }
+    }
+    @Async
+    public void sendTeamRecommendationEmail(String toEmail, String receiverName, String competitionName, String position, String postId) {
+        String url = "https://api.brevo.com/v3/smtp/email";
+        RestTemplate restTemplate = new RestTemplate();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("api-key", brevoApiKey);
+
+        Map<String, Object> sender = Map.of("name", "TeamFinder", "email", senderEmail);
+        Map<String, Object> to = Map.of("email", toEmail);
+
+        // Link to the specific post (update domain if needed)
+        String postLink = "https://team-finder-frontend-87ep.vercel.app/feed";
+
+        Map<String, Object> requestBody = Map.of(
+                "sender", sender,
+                "to", List.of(to),
+                "subject", "New Team Requirement for " + competitionName + "!",
+                "htmlContent", "<div style='font-family: Arial, sans-serif; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; max-width: 500px;'>" +
+                        "<h2 style='color: #0a66c2;'>TeamFinder Match</h2>" +
+                        "<p style='font-size: 16px; color: #444;'>Hi <b>" + receiverName + "</b>,</p>" +
+                        "<p style='font-size: 16px; color: #444;'>Someone just posted a team requirement for an event you are interested in: <b>" + competitionName + "</b>.</p>" +
+                        "<p style='font-size: 16px; color: #444;'>They are looking for a <b>" + position + "</b>.</p>" +
+                        "<div style='margin: 25px 0;'>" +
+                        "<a href='" + postLink + "' style='background-color: #0a66c2; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;'>View Post & Request to Join</a>" +
+                        "</div>" +
+                        "<p style='font-size: 13px; color: #888;'>We are sending you this because you liked this competition on your profile.</p>" +
+                        "</div>"
+        );
+
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+
+        try {
+            restTemplate.postForEntity(url, entity, String.class);
+            System.out.println("✅ Recommendation email sent to " + toEmail);
+        } catch (Exception e) {
+            System.err.println("❌ Failed to send recommendation email: " + e.getMessage());
+        }
+    }
+
+    @Async // Add this to prevent the API from slowing down while sending
+    public void sendOfflineConnectionEmail(String toEmail, String receiverName, String senderUsername) {
+        String url = "https://api.brevo.com/v3/smtp/email";
+        RestTemplate restTemplate = new RestTemplate();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("api-key", brevoApiKey);
+
+        Map<String, Object> sender = Map.of("name", "TeamFinder", "email", senderEmail);
+        Map<String, Object> to = Map.of("email", toEmail);
+
+        Map<String, Object> requestBody = Map.of(
+                "sender", sender,
+                "to", List.of(to),
+                "subject", "New connection request from @" + senderUsername + "!",
+                "htmlContent", "<div style='font-family: Arial, sans-serif; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; max-width: 500px;'>" +
+                        "<h2 style='color: #0a66c2;'>TeamFinder Network</h2>" +
+                        "<p style='font-size: 16px; color: #444;'>Hi <b>" + receiverName + "</b>,</p>" +
+                        "<p style='font-size: 16px; color: #444;'><b>@" + senderUsername + "</b> just sent you a connection request while you were offline.</p>" +
+                        "<div style='margin: 25px 0;'>" +
+                        "<a href='https://team-finder-frontend-87ep.vercel.app/network' style='background-color: #0a66c2; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;'>View Request</a>" +
+                        "</div>" +
+                        "<p style='font-size: 13px; color: #888;'>Grow your network to find the best teammates!</p>" +
+                        "</div>"
+        );
+
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+
+        try {
+            restTemplate.postForEntity(url, entity, String.class);
+            System.out.println("✅ Offline connection email sent to " + toEmail);
+        } catch (Exception e) {
+            System.err.println("❌ Failed to send connection email: " + e.getMessage());
         }
     }
 }

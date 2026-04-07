@@ -1,6 +1,7 @@
 package com.example.TeamFinder.controller;
 
 import com.example.TeamFinder.entity.Post;
+import com.example.TeamFinder.service.NotificationService;
 import com.example.TeamFinder.service.PostService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,12 +17,18 @@ public class PostEntryController {
 
     @Autowired
     private PostService postService;
-
+    @Autowired
+    private NotificationService notificationService;
     @PostMapping("/add-post")
     public ResponseEntity<?> createPost(@RequestBody Post post) {
         try {
             boolean success = postService.savePost(post);
-            if (success) return new ResponseEntity<>(HttpStatus.OK);
+            if (success)
+            {
+                notificationService.notifyUsersAboutNewPost(post);
+                return new ResponseEntity<>(HttpStatus.OK);
+
+            }
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
             log.error("Error while creating post ", e);

@@ -518,6 +518,43 @@ public class UserService {
     }
 
 
+//    public void sendConnectionRequest(String senderUsername, String targetUsername) {
+//        if (senderUsername.equals(targetUsername)) throw new RuntimeException("Cannot connect with yourself");
+//
+//        User sender = userRepository.findByUsername(senderUsername).orElseThrow();
+//        User target = userRepository.findByUsername(targetUsername).orElseThrow();
+//
+//        // Safety check for null lists
+//        if (sender.getConnectionRequestsSent() == null) sender.setConnectionRequestsSent(new ArrayList<>());
+//        if (sender.getConnectionRequestsReceived() == null) sender.setConnectionRequestsReceived(new ArrayList<>());
+//        if (target.getConnectionRequestsSent() == null) target.setConnectionRequestsSent(new ArrayList<>());
+//        if (target.getConnectionRequestsReceived() == null) target.setConnectionRequestsReceived(new ArrayList<>());
+//        if (sender.getConnections() == null) sender.setConnections(new ArrayList<>());
+//        if (target.getConnections() == null) target.setConnections(new ArrayList<>());
+//
+//        // Don't send if already connected or pending
+//        if (
+//                sender.getConnections().contains(targetUsername) ||
+//                        target.getConnections().contains(senderUsername) ||
+//                        sender.getConnectionRequestsSent().contains(targetUsername)
+//        ) {
+//            return;
+//        }
+//
+//        if (
+//                sender.getConnectionRequestsReceived().contains(targetUsername) ||
+//                        target.getConnectionRequestsSent().contains(senderUsername)
+//        ) {
+//            throw new RuntimeException("This user has already sent you a connection request");
+//        }
+//
+//        sender.getConnectionRequestsSent().add(targetUsername);
+//        target.getConnectionRequestsReceived().add(senderUsername);
+//
+//        userRepository.save(sender);
+//        userRepository.save(target);
+//    }
+
     public void sendConnectionRequest(String senderUsername, String targetUsername) {
         if (senderUsername.equals(targetUsername)) throw new RuntimeException("Cannot connect with yourself");
 
@@ -553,6 +590,17 @@ public class UserService {
 
         userRepository.save(sender);
         userRepository.save(target);
+
+        // --- NEW: OFFLINE NOTIFICATION LOGIC ---
+        // Check if target user is offline AND has a valid email address
+        if (!target.isOnline() && target.getEmail() != null && !target.getEmail().isEmpty()) {
+
+            // Get their display name, fallback to username if name isn't set
+            String receiverName = target.getName() != null ? target.getName() : target.getUsername();
+
+            // Trigger the background email using your EmailService
+            emailService.sendOfflineConnectionEmail(target.getEmail(), receiverName, senderUsername);
+        }
     }
 
     public void acceptConnectionRequest(String receiverUsername, String senderUsername) {
